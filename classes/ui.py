@@ -25,6 +25,14 @@ class UI:
         """Print generic text."""
         print("\n", text)
 
+    def print_victory(self, text):
+        """Print victory text."""
+        print("\n", Fore.GREEN, text, Style.RESET_ALL)
+
+    def print_defeat(self, text):
+        """Print defeat text."""
+        print("\n", Fore.RED, text, Style.RESET_ALL)
+
     def list_actions(self, actions):
         """Print a list of actions."""
         i = 1
@@ -39,6 +47,15 @@ class UI:
         for spell in spells:
             print(str(i) + ":", spell.color + spell.name + Style.RESET_ALL,
                   "(cost:", str(spell.cost) + ")")
+            i += 1
+        print(str(i) + ": Cancel")
+
+    def list_inventory(self, inventory):
+        """Print the inventory list."""
+        i = 1
+        for item in inventory:
+            print(str(i) + ":", item["item"].name, "(",
+                  item["item"].description, ")", "x", item["quantity"])
             i += 1
         print(str(i) + ": Cancel")
 
