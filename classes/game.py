@@ -19,16 +19,15 @@ class Game:
             Spell("Cure", 12, 120, "white", Fore.GREEN)
             ]
         # Create Items
-        playerItems = [
-            Item("Potion", "potion", "Heals 50 HP", 50),
-            Item("Hi-Potion", "potion", "Heals 100 HP", 100),
-            Item("Super Potion", "potion", "Heals 500 HP", 500)
-            ]
+        itemList = self.create_items()
         # Instantiate People
         actions = ["Attack", "Magic", "Items"]
         self.player = Person("""Placeholder""", 460, 65, 60, 34, actions,
-                             playerSpells, playerItems)
-        self.enemy = Person("""Shithead""", 460, 65, 60, 34, [], [], [])
+                             playerSpells)
+        for item in itemList:
+            self.player.add_item(item, 5)
+
+        self.enemy = Person("""Shithead""", 460, 65, 60, 34, [], [])
         # Instantiate UI
         self.ui = UI()
 
@@ -37,7 +36,7 @@ class Game:
         ui = self.ui
         player = self.player
         while True:
-            choice = input("Make a selection:")
+            choice = input("Choose an action:")
             if not choice.isdigit():
                 ui.print_error("You must select a number")
             elif 1 <= int(choice) <= len(player.action):
@@ -56,6 +55,21 @@ class Game:
             elif int(choice) == len(player.spell) + 1:
                 return -1
             elif 1 <= int(choice) <= len(player.spell):
+                return int(choice) - 1
+            else:
+                ui.print_error("You must choose a number in the list")
+
+    def choose_item(self):
+        """Return player item choice."""
+        ui = self.ui
+        player = self.player
+        while True:
+            choice = input("Choose an Item:")
+            if not choice.isdigit():
+                ui.print_error("You must enter a number")
+            elif int(choice) == len(player.inventory) + 1:
+                return -1
+            elif 1 <= int(choice) <= len(player.inventory):
                 return int(choice) - 1
             else:
                 ui.print_error("You must choose a number in the list")
@@ -100,8 +114,22 @@ class Game:
                     ui.print_error("You do not have enough MP")
                     continue
 
+            elif actionIndex == 2:
+                ui.list_inventory(player.inventory)
+                itemIndex = self.choose_item()
+                if itemIndex == -1:
+                    ui.print_message("You selected Cancel")
+                    continue
+                itemName = player.inventory[itemIndex]["item"].name
+                ui.print_selection(itemName)
+                itemEffect = player.inventory[itemIndex]["item"].prop
+                if player.inventory[itemIndex]["item"].type == "potion":
+                    player.heal(itemEffect)
+                    ui.print_healing_done(player.name, player.name,
+                                          itemEffect, itemName)
+
             if enemy.get_hp() == 0:
-                ui.print_message("You have won")
+                ui.print_victory("You have won")
                 break
 
             enemyDmg = enemy.generate_damage()
@@ -109,5 +137,14 @@ class Game:
             ui.print_damage_dealt(enemy.name, player.name, enemyDmg, "attack")
 
             if player.get_hp() == 0:
-                ui.print_message("You have died")
+                ui.print_defeat("You have died")
                 break
+
+    # Create Items
+    def create_items(self):
+        """Create master Item List."""
+        return [
+                Item("Potion", "potion", "Heals 50 HP", 50),
+                Item("Hi-Potion", "potion", "Heals 100 HP", 100),
+                Item("Super Potion", "potion", "Heals 500 HP", 500)
+                ]
