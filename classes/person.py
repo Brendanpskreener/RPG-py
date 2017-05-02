@@ -5,7 +5,7 @@ import random
 class Person:
     """Defines the Person class object."""
 
-    def __init__(self, name, hp, mp, atk, df, action, spell, item):
+    def __init__(self, name, hp, mp, atk, df, action, spell):
         """Shit I have to do for some reason."""
         self.name = name
         self.maxhp = hp
@@ -17,7 +17,7 @@ class Person:
         self.df = df
         self.action = action
         self.spell = spell
-        self.item = item
+        self.inventory = []
 
     def generate_damage(self):
         """Return damage."""
@@ -67,3 +67,12 @@ class Person:
     def get_action_name(self, i):
         """Return action name."""
         return self.action[i]
+
+    def add_item(self, newItem, quantity):
+        """Add quantity to player inventory."""
+        for item in self.inventory:
+            if newItem == item["item"]:
+                item["quantity"] += quantity
+                break
+        else:
+            self.inventory.append({"item": newItem, "quantity": quantity})
