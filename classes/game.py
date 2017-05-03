@@ -25,7 +25,7 @@ class Game:
         self.player = Person("""Placeholder""", 460, 65, 60, 34, actions,
                              playerSpells)
         for item in itemList:
-            self.player.add_item(item, 5)
+            self.player.add_item(item, 1)
 
         self.enemy = Person("""Shithead""", 460, 65, 60, 34, [], [])
         # Instantiate UI
@@ -87,27 +87,25 @@ class Game:
             ui.print_selection(player.get_action_name(actionIndex))
 
             if actionIndex == 0:
-                dmg = player.generate_damage()
-                enemy.take_damage(dmg)
-                ui.print_damage_dealt(player.name, enemy.name, dmg, "attack")
+                ui.print_damage_dealt(player.name, enemy.name,
+                                      player.attack(enemy), "attack")
 
             elif actionIndex == 1:
                 ui.list_spells(player.spell)
                 spellIndex = self.choose_spell()
-                spellName = player.get_spell_name(spellIndex)
                 if spellIndex == -1:
                     ui.print_message("You selected Cancel")
                     continue
+                spellName = player.get_spell_name(spellIndex)
                 ui.print_selection(spellName)
-                spellDmg = player.spell[spellIndex].generate_damage()
-                if player.get_spell_mp_cost(spellIndex) <= player.get_mp():
-                    player.reduce_mp(player.get_spell_mp_cost(spellIndex))
-                    if player.spell[spellIndex].type == "white":
-                        player.heal(spellDmg)
+                spell = player.get_spell(spellIndex)
+                if spell.cost <= player.get_mp():
+                    player.reduce_mp(spell.cost)
+                    spellType, spellDmg = player.cast_spell(enemy, spell)
+                    if spellType == "white":
                         ui.print_healing_done(player.name, player.name,
                                               spellDmg, spellName)
-                    elif player.spell[spellIndex].type == "black":
-                        enemy.take_damage(spellDmg)
+                    elif spellType == "black":
                         ui.print_damage_dealt(player.name, enemy.name,
                                               spellDmg, spellName)
                 else:
@@ -120,21 +118,21 @@ class Game:
                 if itemIndex == -1:
                     ui.print_message("You selected Cancel")
                     continue
-                itemName = player.inventory[itemIndex]["item"].name
+                itemName = player.get_item_name(itemIndex)
                 ui.print_selection(itemName)
-                itemEffect = player.inventory[itemIndex]["item"].prop
-                if player.inventory[itemIndex]["item"].type == "potion":
+                itemEffect = player.get_item(itemIndex).prop
+                if player.get_item(itemIndex).type == "potion":
                     player.heal(itemEffect)
                     ui.print_healing_done(player.name, player.name,
                                           itemEffect, itemName)
+                player.remove_item(player.inventory[itemIndex]["item"])
 
             if enemy.get_hp() == 0:
                 ui.print_victory("You have won")
                 break
 
-            enemyDmg = enemy.generate_damage()
-            player.take_damage(enemyDmg)
-            ui.print_damage_dealt(enemy.name, player.name, enemyDmg, "attack")
+            ui.print_damage_dealt(enemy.name, player.name,
+                                  enemy.attack(player), "attack")
 
             if player.get_hp() == 0:
                 ui.print_defeat("You have died")
