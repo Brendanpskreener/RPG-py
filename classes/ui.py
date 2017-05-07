@@ -7,11 +7,11 @@ class UI:
 
     def print_error(self, text):
         """Print error to console."""
-        print(Fore.RED + text + Style.RESET_ALL)
+        print(f"{Fore.RED}{text}{Style.RESET_ALL}")
 
     def print_selection(self, text):
         """Print selection to console."""
-        print("\nYou selected", text, "\n")
+        print(f"\nYou selected {text}\n")
 
     def print_damage_dealt(self, source, target, damage, type):
         """Print damage done."""
@@ -23,47 +23,54 @@ class UI:
 
     def print_message(self, text):
         """Print generic text."""
-        print("\n", text)
+        print(f"\n{text}")
 
     def print_victory(self, text):
         """Print victory text."""
-        print("\n", Fore.GREEN, text, Style.RESET_ALL)
+        print(f"\n{Fore.GREEN}{text}{Style.RESET_ALL}")
 
     def print_defeat(self, text):
         """Print defeat text."""
-        print("\n", Fore.RED, text, Style.RESET_ALL)
+        print(f"\n{Fore.RED}{text}{Style.RESET_ALL}")
 
     def list_actions(self, actions):
         """Print a list of actions."""
         i = 1
         print()
         for action in actions:
-            print(str(i) + ":", action)
+            print(f"{i}: {action}")
             i += 1
 
     def list_spells(self, spells):
         """Print a list of spells."""
         i = 1
         for spell in spells:
-            print(str(i) + ":", spell.color + spell.name + Style.RESET_ALL,
-                  "(cost:", str(spell.cost) + ")")
+            print(f"{i}: {spell.color}{spell.name}{Style.RESET_ALL} "
+                  f"(cost: {spell.cost})")
             i += 1
-        print(str(i) + ": Cancel")
+        print(f"{i}: Cancel")
 
     def list_inventory(self, inventory):
         """Print the inventory list."""
         i = 1
         for item in inventory:
-            print(str(i) + ":", item["item"].name, "(",
-                  item["item"].description, ")", "x", item["quantity"])
+            name = item['item'].name
+            desc = item['item'].description
+            quantity = item['quantity']
+            print(f"{i}: {name} ({desc}) x {quantity}")
             i += 1
         print(str(i) + ": Cancel")
 
-    def print_hpmp(self, player, enemy):
+    def print_hpmp(self, player, enemy, write=print):
         """Print hp and mp for all persons."""
-        print("\n===Your Turn===")
-        print("Enemy HP:", Fore.MAGENTA + Style.DIM, enemy.get_hp(), "/",
-              enemy.get_max_hp(), Style.RESET_ALL)
-        print("Player HP:", Fore.GREEN, player.get_hp(), "/",
-              player.get_max_hp(), Style.RESET_ALL, "\nPlayer MP:", Fore.CYAN,
-              player.get_mp(), "/", player.get_max_mp(), Style.RESET_ALL)
+        eMaxHP = enemy.get_max_hp()
+        eCurHP = enemy.get_hp()
+        pMaxHP = player.get_max_hp()
+        pCurHP = player.get_hp()
+        pMaxMP = player.get_max_mp()
+        pCurMP = player.get_mp()
+        msg = f"""\n===Your Turn===
+        \nEnemy HP: {Fore.MAGENTA}{Style.DIM}{eCurHP}/{eMaxHP}{Style.RESET_ALL}
+        \nPlayer HP: {Fore.GREEN}{pCurHP}/{pMaxHP}{Style.RESET_ALL}
+        \nPlayer MP: {Fore.CYAN}{pCurMP}/{pMaxMP}{Style.RESET_ALL}"""
+        return write(msg)
