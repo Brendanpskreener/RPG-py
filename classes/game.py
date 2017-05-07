@@ -74,6 +74,57 @@ class Game:
             else:
                 ui.print_error("You must choose a number in the list")
 
+    def choose_target(self):
+        """Placeholder."""
+        pass
+
+    def attack(self, source, target):
+        """Perform attack action on target."""
+        print_damage = self.ui.print_damage_dealt
+        print_damage(source.name, target.name,
+                     target.take_damage(source.generate_damage()), "attack")
+
+    def spell_cast(self, source, target, spell):
+        """Perform spell cast action on target using spell."""
+        ui = self.ui
+        source.reduce_mp(spell.cost)
+        spellDmg = spell.generate_damage()
+        if spell.type == "white":
+            target.heal(spellDmg)
+            ui.print_healing_done(source.name, target.name,
+                                  spellDmg, spell.name)
+        elif spell.type == "black":
+            target.take_damage(spellDmg)
+            ui.print_damage_dealt(source.name, target.name,
+                                  spellDmg, spell.name)
+
+    def use_item(self, source, target, item):
+        """Perform use item action on target with item."""
+        ui = self.ui
+        if item.type == "potion":
+            target.heal(item.value)
+            ui.print_healing_done(source.name, target.name,
+                                  item.value, item.type)
+        source.remove_item(item)
+
+        # Player turn
+        # Choose action (every turn)
+        #   (choose attack)
+        #   Choose spell
+        #   Choose item
+        # Choose target
+        # perform action
+        #   spell
+        #       reduce mana
+        #       logically heal or damage
+        #   item
+        #       reduce item quantity
+        #       logically heal or damage
+        # print results
+        #   based on item effect, target and value
+        #
+        # Enemy turn
+        #
     def battle(self):
         """Begin Battle Phase."""
         ui = self.ui
@@ -81,58 +132,46 @@ class Game:
         enemy = self.enemy
 
         while True:
-            ui.print_hpmp(player, enemy)
-            ui.list_actions(player.action)
+            partyMember = player
+            ui.print_hpmp(partyMember, enemy)
+            ui.list_actions(partyMember.action)
             actionIndex = self.choose_action()
-            ui.print_selection(player.get_action_name(actionIndex))
-
+            ui.print_selection(partyMember.get_action_name(actionIndex))
+            # Attack
             if actionIndex == 0:
-                ui.print_damage_dealt(player.name, enemy.name,
-                                      player.attack(enemy), "attack")
-
+                self.attack(partyMember, enemy)
+            # Spell
             elif actionIndex == 1:
-                ui.list_spells(player.spell)
+                ui.list_spells(partyMember.spell)
                 spellIndex = self.choose_spell()
                 if spellIndex == -1:
                     ui.print_message("You selected Cancel")
                     continue
-                spellName = player.get_spell_name(spellIndex)
-                ui.print_selection(spellName)
-                spell = player.get_spell(spellIndex)
-                if spell.cost <= player.get_mp():
-                    player.reduce_mp(spell.cost)
-                    spellType, spellDmg = player.cast_spell(enemy, spell)
-                    if spellType == "white":
-                        ui.print_healing_done(player.name, player.name,
-                                              spellDmg, spellName)
-                    elif spellType == "black":
-                        ui.print_damage_dealt(player.name, enemy.name,
-                                              spellDmg, spellName)
+                spell = partyMember.get_spell(spellIndex)
+                if spell.cost <= partyMember.get_mp():
+                    ui.print_selection(partyMember.get_spell_name(spellIndex))
+                    self.spell_cast(partyMember, enemy, spell)
                 else:
                     ui.print_error("You do not have enough MP")
                     continue
 
+            # Item
             elif actionIndex == 2:
-                ui.list_inventory(player.inventory)
+                ui.list_inventory(partyMember.inventory)
                 itemIndex = self.choose_item()
                 if itemIndex == -1:
                     ui.print_message("You selected Cancel")
                     continue
-                itemName = player.get_item_name(itemIndex)
-                ui.print_selection(itemName)
-                itemEffect = player.get_item(itemIndex).prop
-                if player.get_item(itemIndex).type == "potion":
-                    player.heal(itemEffect)
-                    ui.print_healing_done(player.name, player.name,
-                                          itemEffect, itemName)
-                player.remove_item(player.inventory[itemIndex]["item"])
+                item = partyMember.get_item(itemIndex)
+                ui.print_selection(item.name)
+                self.use_item(partyMember, partyMember, item)
 
             if enemy.get_hp() == 0:
                 ui.print_victory("You have won")
                 break
 
-            ui.print_damage_dealt(enemy.name, player.name,
-                                  enemy.attack(player), "attack")
+            # Enemy turn, lol
+            self.attack(enemy, partyMember)
 
             if player.get_hp() == 0:
                 ui.print_defeat("You have died")
