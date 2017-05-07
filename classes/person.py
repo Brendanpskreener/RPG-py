@@ -19,22 +19,6 @@ class Person:
         self.spell = spell
         self.inventory = []
 
-    def attack(self, target):
-        """Perform Attack, return damage done."""
-        dmg = self.generate_damage()
-        target.take_damage(dmg)
-        return dmg
-
-    def cast_spell(self, target, spell):
-        """Perform spell cast, return spell type and damage."""
-        spellDmg = spell.generate_damage()
-        if spell.type == "white":
-            self.heal(spellDmg)
-
-        elif spell.type == "black":
-            target.take_damage(spellDmg)
-        return (spell.type, spellDmg)
-
     def generate_damage(self):
         """Return damage."""
         return random.randrange(self.atkl, self.atkh)
@@ -44,7 +28,7 @@ class Person:
         self.hp -= dmg
         if self.hp < 0:
             self.hp = 0
-        return self.hp
+        return dmg
 
     def heal(self, dmg):
         """Return Heal."""
