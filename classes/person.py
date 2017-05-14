@@ -5,18 +5,18 @@ import random
 class Person:
     """Defines the Person class object."""
 
-    def __init__(self, name, hp, mp, atk, df, action, spell):
+    def __init__(self, stats):
         """Shit I have to do for some reason."""
-        self.name = name
-        self.maxhp = hp
-        self.hp = hp
-        self.maxmp = mp
-        self.mp = mp
-        self.atkl = atk - 10
-        self.atkh = atk + 10
-        self.df = df
-        self.action = action
-        self.spell = spell
+        self.name = stats["name"]
+        self.maxhp = stats["hp"]
+        self.hp = stats["hp"]
+        self.maxmp = stats["mp"]
+        self.mp = stats["mp"]
+        self.atkl = stats["attack"] - 10
+        self.atkh = stats["attack"] + 10
+        self.df = stats["defense"]
+        self.action = stats["actions"]
+        self.spell = stats["spells"]
         self.inventory = []
 
     def generate_damage(self):
