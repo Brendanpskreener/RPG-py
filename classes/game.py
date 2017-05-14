@@ -12,22 +12,17 @@ class Game:
     def __init__(self):
         """Docstring for Game initialization."""
         # Create spell
-        playerSpells = [
+        self.spellList = [
             Spell("Fire", 10, 60, "black", Fore.RED + Style.BRIGHT),
             Spell("Thunder", 20, 80, "black", Fore.YELLOW),
             Spell("Blizzard", 30, 100, "black", Fore.BLUE),
             Spell("Cure", 12, 120, "white", Fore.GREEN)
             ]
         # Create Items
-        itemList = self.create_items()
+        self.itemList = self.create_items()
         # Instantiate People
-        actions = ["Attack", "Magic", "Items"]
-        self.player = Person("""Placeholder""", 460, 65, 60, 34, actions,
-                             playerSpells)
-        for item in itemList:
-            self.player.add_item(item, 1)
-
-        self.enemy = Person("""Shithead""", 460, 65, 60, 34, [], [])
+        self.playerParty = []
+        self.enemyParty = []
         # Instantiate UI
         self.ui = UI()
 
@@ -128,43 +123,42 @@ class Game:
     def battle(self):
         """Begin Battle Phase."""
         ui = self.ui
-        player = self.player
-        enemy = self.enemy
-
+        self.playerParty = self.get_party(True)
+        self.enemyParty = self.get_party()
         while True:
-            partyMember = player
             ui.print_hpmp(partyMember, enemy)
-            ui.list_actions(partyMember.action)
-            actionIndex = self.choose_action()
-            ui.print_selection(partyMember.get_action_name(actionIndex))
-            # Attack
-            if actionIndex == 0:
-                self.attack(partyMember, enemy)
-            # Spell
-            elif actionIndex == 1:
-                ui.list_spells(partyMember.spell)
-                spellIndex = self.choose_spell()
-                if spellIndex == -1:
-                    ui.print_message("You selected Cancel")
-                    continue
-                spell = partyMember.get_spell(spellIndex)
-                if spell.cost <= partyMember.get_mp():
-                    ui.print_selection(partyMember.get_spell_name(spellIndex))
-                    self.spell_cast(partyMember, enemy, spell)
-                else:
-                    ui.print_error("You do not have enough MP")
-                    continue
+            for partyMember in self.playerParty:
+                ui.list_actions(partyMember.action)
+                actionIndex = self.choose_action()
+                ui.print_selection(partyMember.get_action_name(actionIndex))
+                # Attack
+                if actionIndex == 0:
+                    self.attack(partyMember, enemy)
+                # Spell
+                elif actionIndex == 1:
+                    ui.list_spells(partyMember.spell)
+                    spellIndex = self.choose_spell()
+                    if spellIndex == -1:
+                        ui.print_message("You selected Cancel")
+                        continue
+                    spell = partyMember.get_spell(spellIndex)
+                    if spell.cost <= partyMember.get_mp():
+                        ui.print_selection(partyMember.get_spell_name(spellIndex))
+                        self.spell_cast(partyMember, enemy, spell)
+                    else:
+                        ui.print_error("You do not have enough MP")
+                        continue
 
-            # Item
-            elif actionIndex == 2:
-                ui.list_inventory(partyMember.inventory)
-                itemIndex = self.choose_item()
-                if itemIndex == -1:
-                    ui.print_message("You selected Cancel")
-                    continue
-                item = partyMember.get_item(itemIndex)
-                ui.print_selection(item.name)
-                self.use_item(partyMember, partyMember, item)
+                # Item
+                elif actionIndex == 2:
+                    ui.list_inventory(partyMember.inventory)
+                    itemIndex = self.choose_item()
+                    if itemIndex == -1:
+                        ui.print_message("You selected Cancel")
+                        continue
+                    item = partyMember.get_item(itemIndex)
+                    ui.print_selection(item.name)
+                    self.use_item(partyMember, partyMember, item)
 
             if enemy.get_hp() == 0:
                 ui.print_victory("You have won")
@@ -185,3 +179,75 @@ class Game:
                 Item("Hi-Potion", "potion", "Heals 100 HP", 100),
                 Item("Super Potion", "potion", "Heals 500 HP", 500)
                 ]
+
+    # Goal: Handle high level player/enemy party creation
+    # Player or Enemy party?
+    #   If player: get name
+    #              add to player list
+    #   else: add random number of enemies to enemy list
+    #   Tier 1
+    def get_party(self, isPlayer=False, count=3):
+        """Return party."""
+        if isPlayer:
+            party = self.get_player_party(count)
+        else:
+            party = self.get_enemy_party(count)
+        return party
+
+    # Tier 2
+    # Player Party Creation
+    def get_player_party(self, count=3):
+        """Return player party."""
+        ui = self.ui
+        party = []
+        for i in range(1, count + 1, 1):
+            charName = input(f"Enter player {i} Name:")
+            if len(charName) <= 0:
+                ui.print_error("You must enter at least 1 character")
+            else:
+                # Create party member
+                partyMember = self.get_person({
+                    "name": charName,
+                    "hp": 500,
+                    "mp": 70,
+                    "attack": 45,
+                    "defense": 40,
+                    "actions": ["Attack", "Magic", "Item"],
+                    "spells": self.spellList
+                })
+                # Fill party member's inventory
+                for item in self.itemList:
+                    partyMember.add_item(item, 5)
+                # Add party member to player party
+                self.add_party_member(party, partyMember)
+        return party
+
+    # Tier 2
+    # Enemy Party Creation
+    def get_enemy_party(self, count=3):
+        """Return ."""
+        party = []
+        for i in range(1, count + 1, 1):
+            enemy = self.get_person({
+                "name": f"Shithead {i}",
+                "hp": 500,
+                "mp": 70,
+                "attack": 45,
+                "defense": 40,
+                "actions": [],
+                "spells": []
+            })
+            self.add_party_member(party, enemy)
+        return party
+
+    def get_person(self, stats):
+        """Return a person object."""
+        # TODO Add stat validation
+        return Person(stats)
+
+    # Tier 3
+    def add_party_member(self, party, member):
+        """Append member to party."""
+        if type(member) == Person:
+            party.append(member)
+        return party
