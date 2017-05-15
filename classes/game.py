@@ -71,9 +71,20 @@ class Game:
             else:
                 ui.print_error("You must choose a number in the list")
 
-    def choose_target(self):
+    def choose_target(self, party):
         """Return target selection."""
-        pass
+        ui = self.ui
+        ui.list_targets(party)
+        while True:
+            choice = input("Choose a Target:")
+            if not choice.isdigit():
+                ui.print_error("You must select a number")
+            elif 1 <= int(choice) <= len(party):
+                actionIndex = int(choice) - 1
+                ui.print_selection(party[actionIndex].name)
+                return actionIndex
+            else:
+                ui.print_error("You must choose a number in the list")
 
     def attack(self, source, target):
         """Perform attack action on target."""
@@ -134,7 +145,8 @@ class Game:
                 actionIndex = self.choose_action(partyMember)
                 # Attack
                 if actionIndex == 0:
-                    self.attack(partyMember, enemy)
+                    targetIndex = self.choose_target(self.enemyParty)
+                    self.attack(partyMember, self.enemyParty[targetIndex])
                 # Spell
                 elif actionIndex == 1:
                     ui.list_spells(partyMember.spell)
@@ -160,17 +172,6 @@ class Game:
                     item = partyMember.get_item(itemIndex)
                     ui.print_selection(item.name)
                     self.use_item(partyMember, partyMember, item)
-
-            if enemy.get_hp() == 0:
-                ui.print_victory("You have won")
-                break
-
-            # Enemy turn, lol
-            self.attack(enemy, partyMember)
-
-            if player.get_hp() == 0:
-                ui.print_defeat("You have died")
-                break
 
     # Create Items
     def create_items(self):
