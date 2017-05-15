@@ -61,6 +61,14 @@ class UI:
             i += 1
         print(str(i) + ": Cancel")
 
+    def list_targets(self, targets):
+        """Print a list of targets."""
+        i = 1
+        for target in targets:
+            print(f"{i}: {target.name}")
+            i += 1
+        print(f"{i}: Cancel")
+
     def print_columns(self, columnData, width=30):
         """Print list in a column format with a specified width."""
         for elements in columnData:
