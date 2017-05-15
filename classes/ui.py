@@ -61,16 +61,27 @@ class UI:
             i += 1
         print(str(i) + ": Cancel")
 
-    def print_hpmp(self, player, enemy, write=print):
-        """Print hp and mp for all persons."""
-        eMaxHP = enemy.get_max_hp()
-        eCurHP = enemy.get_hp()
-        pMaxHP = player.get_max_hp()
-        pCurHP = player.get_hp()
-        pMaxMP = player.get_max_mp()
-        pCurMP = player.get_mp()
-        msg = f"""\n===Your Turn===
-        \nEnemy HP: {Fore.MAGENTA}{Style.DIM}{eCurHP}/{eMaxHP}{Style.RESET_ALL}
-        \nPlayer HP: {Fore.GREEN}{pCurHP}/{pMaxHP}{Style.RESET_ALL}
-        \nPlayer MP: {Fore.CYAN}{pCurMP}/{pMaxMP}{Style.RESET_ALL}"""
-        return write(msg)
+    def print_columns(self, columnData, width=30):
+        """Print list in a column format with a specified width."""
+        for elements in columnData:
+            print(f"{elements:<{width}}", end=" ")
+        print()
+
+    def print_hpmp(self, party, isPlayer=False):
+        """Print hp and mp for all persons in a party list."""
+        pNames = []
+        pHp = []
+        pMp = []
+        for person in party:
+            pHp.append(f"{Fore.GREEN}{person.hp}/"
+                       f"{person.maxhp}{Style.RESET_ALL}")
+            pMp.append(f"{Fore.CYAN}{person.mp}/"
+                       f"{person.maxmp}{Style.RESET_ALL}")
+            if isPlayer:
+                pNames.append(f"{Fore.GREEN}{person.name}{Style.RESET_ALL}")
+            else:
+                pNames.append(f"{Fore.RED}{person.name}{Style.RESET_ALL}")
+        self.print_columns(pNames)
+        self.print_columns(pHp)
+        self.print_columns(pMp)
+        print()
