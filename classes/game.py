@@ -26,16 +26,18 @@ class Game:
         # Instantiate UI
         self.ui = UI()
 
-    def choose_action(self):
+    def choose_action(self, player):
         """Return player action choice."""
         ui = self.ui
-        player = self.player
+        ui.list_actions(player.action)
         while True:
             choice = input("Choose an action:")
             if not choice.isdigit():
                 ui.print_error("You must select a number")
             elif 1 <= int(choice) <= len(player.action):
-                return int(choice) - 1
+                actionIndex = int(choice) - 1
+                ui.print_selection(player.get_action_name(actionIndex))
+                return actionIndex
             else:
                 ui.print_error("You must choose a number in the list")
 
@@ -70,7 +72,7 @@ class Game:
                 ui.print_error("You must choose a number in the list")
 
     def choose_target(self):
-        """Placeholder."""
+        """Return target selection."""
         pass
 
     def attack(self, source, target):
@@ -126,11 +128,10 @@ class Game:
         self.playerParty = self.get_party(True)
         self.enemyParty = self.get_party()
         while True:
-            ui.print_hpmp(partyMember, enemy)
+            ui.print_hpmp(self.playerParty, True)
+            ui.print_hpmp(self.enemyParty)
             for partyMember in self.playerParty:
-                ui.list_actions(partyMember.action)
-                actionIndex = self.choose_action()
-                ui.print_selection(partyMember.get_action_name(actionIndex))
+                actionIndex = self.choose_action(partyMember)
                 # Attack
                 if actionIndex == 0:
                     self.attack(partyMember, enemy)
