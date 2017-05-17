@@ -9,9 +9,9 @@ class UI:
         """Print error to console."""
         print(f"{Fore.RED}{text}{Style.RESET_ALL}")
 
-    def print_selection(self, text):
+    def print_selection(self, text, playerName):
         """Print selection to console."""
-        print(f"\nYou selected {text}\n")
+        print(f"\n{playerName} selected {text}\n")
 
     def print_damage_dealt(self, source, target, damage, type):
         """Print damage done."""
