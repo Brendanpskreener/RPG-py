@@ -31,20 +31,26 @@ class Game:
         ui = self.ui
         ui.list_actions(player.action)
         while True:
-            choice = input("Choose an action:")
+            choice = input(f"{player.name}, Choose an action:")
             if not choice.isdigit():
                 ui.print_error("You must select a number")
             elif 1 <= int(choice) <= len(player.action):
-                actionIndex = int(choice) - 1
-                ui.print_selection(player.get_action_name(actionIndex))
-                return actionIndex
+                i = int(choice) - 1
+                ui.print_selection(player.get_action_name(i), player.name)
+                return i
             else:
                 ui.print_error("You must choose a number in the list")
 
-    def choose_spell(self):
-        """Return spell choice."""
+    def choose_spell(self, player):
+        """Return spell choice.
+
+        Parameters
+        ---------
+        player : Person
+            Person object that will choose a spell from their list of spells
+        """
         ui = self.ui
-        player = self.player
+        ui.list_spells(player.spell)
         while True:
             choice = input("Choose a spell:")
             if not choice.isdigit():
@@ -71,8 +77,22 @@ class Game:
             else:
                 ui.print_error("You must choose a number in the list")
 
-    def choose_target(self, party):
-        """Return target selection."""
+    def choose_target(self, party, player):
+        """Return target selection.
+
+        Description
+        ----------
+        Print list of available targets to the console for the player to
+        choose from then present the player with a prompt. The choice is
+        validated and the result is passed to the UI object to be printed.
+
+        Parameters
+        ----------
+        party : list
+            list of person objects to pick target from
+        player : Person
+            Person object picking the target
+        """
         ui = self.ui
         ui.list_targets(party)
         while True:
@@ -80,9 +100,11 @@ class Game:
             if not choice.isdigit():
                 ui.print_error("You must select a number")
             elif 1 <= int(choice) <= len(party):
-                actionIndex = int(choice) - 1
-                ui.print_selection(party[actionIndex].name)
-                return actionIndex
+                i = int(choice) - 1
+                ui.print_selection(party[i].name, player.name)
+                return i
+            elif int(choice) == len(party) + 1:
+                return -1
             else:
                 ui.print_error("You must choose a number in the list")
 
@@ -115,49 +137,41 @@ class Game:
                                   item.value, item.type)
         source.remove_item(item)
 
-        # Player turn
-        # Choose action (every turn)
-        #   (choose attack)
-        #   Choose spell
-        #   Choose item
-        # Choose target
-        # perform action
-        #   spell
-        #       reduce mana
-        #       logically heal or damage
-        #   item
-        #       reduce item quantity
-        #       logically heal or damage
-        # print results
-        #   based on item effect, target and value
-        #
-        # Enemy turn
-        #
     def battle(self):
         """Begin Battle Phase."""
         ui = self.ui
         self.playerParty = self.get_party(True)
         self.enemyParty = self.get_party()
         while True:
-            ui.print_hpmp(self.playerParty, True)
-            ui.print_hpmp(self.enemyParty)
             for partyMember in self.playerParty:
+                ui.print_hpmp(self.playerParty, True)
+                ui.print_hpmp(self.enemyParty)
                 actionIndex = self.choose_action(partyMember)
                 # Attack
                 if actionIndex == 0:
-                    targetIndex = self.choose_target(self.enemyParty)
-                    self.attack(partyMember, self.enemyParty[targetIndex])
-                # Spell
-                elif actionIndex == 1:
-                    ui.list_spells(partyMember.spell)
-                    spellIndex = self.choose_spell()
-                    if spellIndex == -1:
+                    tI = self.choose_target(self.enemyParty, partyMember)
+                    if tI == -1:
                         ui.print_message("You selected Cancel")
                         continue
-                    spell = partyMember.get_spell(spellIndex)
+                    self.attack(partyMember, self.enemyParty[tI])
+                # Spell
+                elif actionIndex == 1:
+                    sI = self.choose_spell(partyMember)
+                    if sI == -1:
+                        ui.print_message("You selected Cancel")
+                        continue
+                    spell = partyMember.get_spell(sI)
                     if spell.cost <= partyMember.get_mp():
-                        ui.print_selection(partyMember.get_spell_name(spellIndex))
-                        self.spell_cast(partyMember, enemy, spell)
+                        ui.print_selection(spell.name, partyMember.name)
+                        if spell.type == "white":
+                            party = self.playerParty
+                        elif spell.type == "black":
+                            party = self.enemyParty
+                        tI = self.choose_target(party, partyMember)
+                        if tI == -1:
+                            ui.print_message("You selected Cancel")
+                            continue
+                        self.spell_cast(partyMember, party[tI], spell)
                     else:
                         ui.print_error("You do not have enough MP")
                         continue
