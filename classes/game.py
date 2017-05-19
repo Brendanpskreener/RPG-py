@@ -4,6 +4,7 @@ from classes.person import Person
 from classes.spell import Spell
 from classes.item import Item
 from classes.ui import UI
+from random import randrange
 
 
 class Game:
@@ -62,10 +63,9 @@ class Game:
             else:
                 ui.print_error("You must choose a number in the list")
 
-    def choose_item(self):
+    def choose_item(self, player):
         """Return player item choice."""
         ui = self.ui
-        player = self.player
         while True:
             choice = input("Choose an Item:")
             if not choice.isdigit():
@@ -108,6 +108,35 @@ class Game:
             else:
                 ui.print_error("You must choose a number in the list")
 
+    def enemy_choose_target(self, party, player):
+        """Return "randomly" selected person object.
+
+        Description
+        -----------
+        Result is passed to the UI object to be printed.
+
+        Parameters
+        ----------
+        party : list
+            list of person objects to choose target from
+        player : person
+            person object choosing the target
+        """
+        ui = self.ui
+        x = randrange(0, 2)
+        if x == 0:
+            target = party[randrange(0, len(party))]
+            ui.print_selection(target.name, player.name)
+            return target
+        elif x == 1:
+            sortedParty = []
+            for index, person in enumerate(party):
+                sortedParty.append({"index": index, "hp": person.hp})
+            sortedParty.sort(key=lambda x: x["hp"])
+            target = party[sortedParty[0]["index"]]
+            ui.print_selection(target.name, player.name)
+            return target
+
     def attack(self, source, target):
         """Perform attack action on target."""
         print_damage = self.ui.print_damage_dealt
@@ -144,48 +173,61 @@ class Game:
         self.enemyParty = self.get_party()
         while True:
             for partyMember in self.playerParty:
-                ui.print_hpmp(self.playerParty, True)
-                ui.print_hpmp(self.enemyParty)
-                actionIndex = self.choose_action(partyMember)
-                # Attack
-                if actionIndex == 0:
-                    tI = self.choose_target(self.enemyParty, partyMember)
-                    if tI == -1:
-                        ui.print_message("You selected Cancel")
-                        continue
-                    self.attack(partyMember, self.enemyParty[tI])
-                # Spell
-                elif actionIndex == 1:
-                    sI = self.choose_spell(partyMember)
-                    if sI == -1:
-                        ui.print_message("You selected Cancel")
-                        continue
-                    spell = partyMember.get_spell(sI)
-                    if spell.cost <= partyMember.get_mp():
-                        ui.print_selection(spell.name, partyMember.name)
-                        if spell.type == "white":
-                            party = self.playerParty
-                        elif spell.type == "black":
-                            party = self.enemyParty
-                        tI = self.choose_target(party, partyMember)
+                while True:
+                    ui.print_hpmp(self.playerParty, True)
+                    ui.print_hpmp(self.enemyParty)
+                    actionIndex = self.choose_action(partyMember)
+                    # Attack
+                    if actionIndex == 0:
+                        tI = self.choose_target(self.enemyParty, partyMember)
                         if tI == -1:
                             ui.print_message("You selected Cancel")
                             continue
-                        self.spell_cast(partyMember, party[tI], spell)
-                    else:
-                        ui.print_error("You do not have enough MP")
-                        continue
-
-                # Item
-                elif actionIndex == 2:
-                    ui.list_inventory(partyMember.inventory)
-                    itemIndex = self.choose_item()
-                    if itemIndex == -1:
-                        ui.print_message("You selected Cancel")
-                        continue
-                    item = partyMember.get_item(itemIndex)
-                    ui.print_selection(item.name)
-                    self.use_item(partyMember, partyMember, item)
+                        self.attack(partyMember, self.enemyParty[tI])
+                        break
+                    # Spell
+                    elif actionIndex == 1:
+                        sI = self.choose_spell(partyMember)
+                        if sI == -1:
+                            ui.print_message("You selected Cancel")
+                            continue
+                        spell = partyMember.get_spell(sI)
+                        if spell.cost <= partyMember.get_mp():
+                            ui.print_selection(spell.name, partyMember.name)
+                            if spell.type == "white":
+                                party = self.playerParty
+                            elif spell.type == "black":
+                                party = self.enemyParty
+                            tI = self.choose_target(party, partyMember)
+                            if tI == -1:
+                                ui.print_message("You selected Cancel")
+                                continue
+                            self.spell_cast(partyMember, party[tI], spell)
+                        else:
+                            ui.print_error("You do not have enough MP")
+                            continue
+                        break
+                    # Item
+                    elif actionIndex == 2:
+                        ui.list_inventory(partyMember.inventory)
+                        itemIndex = self.choose_item(partyMember)
+                        if itemIndex == -1:
+                            ui.print_message("You selected Cancel")
+                            continue
+                        item = partyMember.get_item(itemIndex)
+                        ui.print_selection(item.name, partyMember.name)
+                        self.use_item(partyMember, partyMember, item)
+                        break
+                for index, enemyMember in enumerate(self.enemyParty):
+                    if enemyMember.hp <= 0:
+                        self.remove_party_member(self.enemyParty, index)
+            for enemyMember in self.enemyParty:
+                self.attack(enemyMember,
+                            self.enemy_choose_target(self.playerParty,
+                                                     enemyMember))
+                for index, partyMember in enumerate(self.playerParty):
+                    if partyMember.hp <= 0:
+                        self.remove_party_member(self.playerParty, index)
 
     # Create Items
     def create_items(self):
@@ -266,4 +308,9 @@ class Game:
         """Append member to party."""
         if type(member) == Person:
             party.append(member)
+        return party
+
+    def remove_party_member(self, party, index):
+        """Pop member from party."""
+        party.pop(index)
         return party
