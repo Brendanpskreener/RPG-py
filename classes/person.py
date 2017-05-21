@@ -60,14 +60,6 @@ class Person:
         """Return spell object."""
         return self.spell[i]
 
-    def get_spell_name(self, i):
-        """Return spell name."""
-        return self.spell[i].name
-
-    def get_spell_mp_cost(self, i):
-        """Return spell cost."""
-        return self.spell[i].cost
-
     def get_action_name(self, i):
         """Return action name."""
         return self.action[i]
@@ -93,10 +85,6 @@ class Person:
     def get_item(self, i):
         """Return Item Object from Dictionary within Inventory."""
         return self.inventory[i]["item"]
-
-    def get_item_name(self, i):
-        """Return Item Object's Name."""
-        return self.get_item(i).name
 
     def get_item_quantity(self, i):
         """Return Item Object's quantity within Inventory."""
