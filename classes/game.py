@@ -5,6 +5,7 @@ from classes.spell import Spell
 from classes.item import Item
 from classes.ui import UI
 from random import randrange
+from random import choice as randChoice
 
 
 class Game:
@@ -108,6 +109,38 @@ class Game:
             else:
                 ui.print_error("You must choose a number in the list")
 
+    def enemy_choose_action(self, player):
+        """Return randomly selected action.
+
+        Description
+        -----------
+        Result is passed to the UI object to be printed.
+
+        Parameters
+        ----------
+        player : person
+            person object choosing the action
+        """
+        ui = self.ui
+        hasSpells = any(s.cost <= player.get_mp() for s in player.spell)
+        i = 0
+        if hasSpells:
+            i = randrange(0, 2)
+        ui.print_selection(player.get_action_name(i), player.name)
+        return i
+
+    def enemy_choose_spell(self, player):
+        """Return random spell object.
+
+        Parameters
+        ---------
+        player : Person
+            Person object that will choose a spell from their list of spells
+        """
+        aSpells = list(filter(lambda s: s.cost <= player.get_mp(),
+                              player.spell))
+        return randChoice(aSpells)
+
     def enemy_choose_target(self, party, player):
         """Return "randomly" selected person object.
 
@@ -172,14 +205,21 @@ class Game:
         self.playerParty = self.get_party(True)
         self.enemyParty = self.get_party()
         while True:
-            for partyMember in self.playerParty:
+            # self.perform_player_turn(self.playerParty, self.enemyParty)
+            # self.check_victory(self.enemyParty)
+            # self.perform_enemy_turn(self.playerParty, self.enemyParty)
+            # self.check_defeat(self.playerParty)
+            for partyMember in filter(lambda p: p.hp > 0, self.playerParty):
+                viableEnemy = list(filter(lambda p: p.hp > 0, self.enemyParty))
+                viablePlayer = list(filter(lambda p: p.hp > 0,
+                                           self.playerParty))
                 while True:
                     ui.print_hpmp(self.playerParty, True)
                     ui.print_hpmp(self.enemyParty)
                     actionIndex = self.choose_action(partyMember)
                     # Attack
                     if actionIndex == 0:
-                        tI = self.choose_target(self.enemyParty, partyMember)
+                        tI = self.choose_target(viableEnemy, partyMember)
                         if tI == -1:
                             ui.print_message("You selected Cancel")
                             continue
@@ -195,9 +235,9 @@ class Game:
                         if spell.cost <= partyMember.get_mp():
                             ui.print_selection(spell.name, partyMember.name)
                             if spell.type == "white":
-                                party = self.playerParty
+                                party = viablePlayer
                             elif spell.type == "black":
-                                party = self.enemyParty
+                                party = viableEnemy
                             tI = self.choose_target(party, partyMember)
                             if tI == -1:
                                 ui.print_message("You selected Cancel")
@@ -216,18 +256,35 @@ class Game:
                             continue
                         item = partyMember.get_item(itemIndex)
                         ui.print_selection(item.name, partyMember.name)
-                        self.use_item(partyMember, partyMember, item)
+                        party = viablePlayer
+                        tI = self.choose_target(party, partyMember)
+                        if tI == -1:
+                            ui.print_message("You selected Cancel")
+                            continue
+                        self.use_item(partyMember, party[tI], item)
                         break
-                for index, enemyMember in enumerate(self.enemyParty):
-                    if enemyMember.hp <= 0:
-                        self.remove_party_member(self.enemyParty, index)
-            for enemyMember in self.enemyParty:
-                self.attack(enemyMember,
-                            self.enemy_choose_target(self.playerParty,
-                                                     enemyMember))
-                for index, partyMember in enumerate(self.playerParty):
-                    if partyMember.hp <= 0:
-                        self.remove_party_member(self.playerParty, index)
+                # Check if enemy party is dead
+                # all()
+
+            for enemyMember in filter(lambda p: p.hp > 0, self.enemyParty):
+                viableEnemy = list(filter(lambda p: p.hp > 0, self.enemyParty))
+                viablePlayer = list(filter(lambda p: p.hp > 0,
+                                           self.playerParty))
+                aI = self.enemy_choose_action(enemyMember)
+                if aI == 0:
+                    tar = self.enemy_choose_target(viablePlayer, enemyMember)
+                    self.attack(enemyMember, tar)
+                elif aI == 1:
+                    spell = self.enemy_choose_spell(enemyMember)
+                    ui.print_selection(spell.name, enemyMember.name)
+                    if spell.type == "white":
+                        party = viableEnemy
+                    elif spell.type == "black":
+                        party = viablePlayer
+                    tar = self.enemy_choose_target(party, enemyMember)
+                    self.spell_cast(enemyMember, tar, spell)
+                # check if player party is dead
+                # all()
 
     # Create Items
     def create_items(self):
@@ -292,9 +349,11 @@ class Game:
                 "mp": 70,
                 "attack": 45,
                 "defense": 40,
-                "actions": [],
-                "spells": []
+                "actions": ["Attack", "Magic", "Item"],
+                "spells": self.spellList
             })
+            for item in self.itemList:
+                enemy.add_item(item, 5)
             self.add_party_member(party, enemy)
         return party
 
