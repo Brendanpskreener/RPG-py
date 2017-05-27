@@ -44,7 +44,7 @@ class Game:
                 ui.print_error("You must choose a number in the list")
 
     def choose_spell(self, player):
-        """Return spell choice.
+        """Return spell object choice.
 
         Parameters
         ---------
@@ -52,15 +52,17 @@ class Game:
             Person object that will choose a spell from their list of spells
         """
         ui = self.ui
-        ui.list_spells(player.spell)
+        aSpells = list(filter(lambda s: s.cost <= player.get_mp(),
+                              player.spell))
+        ui.list_spells(aSpells)
         while True:
             choice = input("Choose a spell:")
             if not choice.isdigit():
                 ui.print_error("You must enter a number")
-            elif int(choice) == len(player.spell) + 1:
-                return -1
-            elif 1 <= int(choice) <= len(player.spell):
-                return int(choice) - 1
+            elif int(choice) == len(aSpells) + 1:
+                return None
+            elif int(choice)-1 in range(len(aSpells)):
+                return aSpells[int(choice) - 1]
             else:
                 ui.print_error("You must choose a number in the list")
 
@@ -199,56 +201,46 @@ class Game:
                                   item.value, item.type)
         source.remove_item(item)
 
-    def battle(self):
-        """Begin Battle Phase."""
+    def perform_player_turn(self):
+        """Perform player turn logic."""
+        playerParty = self.playerParty
+        enemyParty = self.enemyParty
         ui = self.ui
-        self.playerParty = self.get_party(True)
-        self.enemyParty = self.get_party()
-        while True:
-            # self.perform_player_turn(self.playerParty, self.enemyParty)
-            # self.check_victory(self.enemyParty)
-            # self.perform_enemy_turn(self.playerParty, self.enemyParty)
-            # self.check_defeat(self.playerParty)
-            for partyMember in filter(lambda p: p.hp > 0, self.playerParty):
-                viableEnemy = list(filter(lambda p: p.hp > 0, self.enemyParty))
-                viablePlayer = list(filter(lambda p: p.hp > 0,
-                                           self.playerParty))
-                while True:
-                    ui.print_hpmp(self.playerParty, True)
-                    ui.print_hpmp(self.enemyParty)
-                    actionIndex = self.choose_action(partyMember)
-                    # Attack
-                    if actionIndex == 0:
-                        tI = self.choose_target(viableEnemy, partyMember)
+        for partyMember in filter(lambda p: p.hp > 0, playerParty):
+            viableEnemy = list(filter(lambda p: p.hp > 0, enemyParty))
+            viablePlayer = list(filter(lambda p: p.hp > 0,
+                                       playerParty))
+            while True:
+                ui.print_hpmp(playerParty, True)
+                ui.print_hpmp(enemyParty)
+                aI = self.choose_action(partyMember)
+                # Attack
+                if aI == 0:
+                    tI = self.choose_target(viableEnemy, partyMember)
+                    if tI == -1:
+                        ui.print_message("You selected Cancel")
+                        continue
+                    self.attack(partyMember, enemyParty[tI])
+                    break
+                # Spell
+                elif aI == 1:
+                        spell = self.choose_spell(partyMember)
+                        if not spell:
+                            ui.print_message("You selected Cancel")
+                            continue
+                        ui.print_selection(spell.name, partyMember.name)
+                        if spell.type == "white":
+                            party = viablePlayer
+                        elif spell.type == "black":
+                            party = viableEnemy
+                        tI = self.choose_target(party, partyMember)
                         if tI == -1:
                             ui.print_message("You selected Cancel")
                             continue
-                        self.attack(partyMember, self.enemyParty[tI])
+                        self.spell_cast(partyMember, party[tI], spell)
                         break
-                    # Spell
-                    elif actionIndex == 1:
-                        sI = self.choose_spell(partyMember)
-                        if sI == -1:
-                            ui.print_message("You selected Cancel")
-                            continue
-                        spell = partyMember.get_spell(sI)
-                        if spell.cost <= partyMember.get_mp():
-                            ui.print_selection(spell.name, partyMember.name)
-                            if spell.type == "white":
-                                party = viablePlayer
-                            elif spell.type == "black":
-                                party = viableEnemy
-                            tI = self.choose_target(party, partyMember)
-                            if tI == -1:
-                                ui.print_message("You selected Cancel")
-                                continue
-                            self.spell_cast(partyMember, party[tI], spell)
-                        else:
-                            ui.print_error("You do not have enough MP")
-                            continue
-                        break
-                    # Item
-                    elif actionIndex == 2:
+                # Item
+                elif aI == 2:
                         ui.list_inventory(partyMember.inventory)
                         itemIndex = self.choose_item(partyMember)
                         if itemIndex == -1:
@@ -263,8 +255,18 @@ class Game:
                             continue
                         self.use_item(partyMember, party[tI], item)
                         break
-                # Check if enemy party is dead
-                # all()
+
+    def battle(self):
+        """Begin Battle Phase."""
+        self.playerParty = self.get_party(True)
+        self.enemyParty = self.get_party()
+        while True:
+            self.perform_player_turn()
+            # self.check_victory(self.enemyParty)
+            # self.perform_enemy_turn(self.playerParty, self.enemyParty)
+            # self.check_defeat(self.playerParty)
+            # Check if enemy party is dead
+            # all()
 
             for enemyMember in filter(lambda p: p.hp > 0, self.enemyParty):
                 viableEnemy = list(filter(lambda p: p.hp > 0, self.enemyParty))
