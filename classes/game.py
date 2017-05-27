@@ -124,9 +124,8 @@ class Game:
             person object choosing the action
         """
         ui = self.ui
-        hasSpells = any(s.cost <= player.get_mp() for s in player.spell)
         i = 0
-        if hasSpells:
+        if any(s.cost <= player.get_mp() for s in player.spell):
             i = randrange(0, 2)
         ui.print_selection(player.get_action_name(i), player.name)
         return i
@@ -256,37 +255,53 @@ class Game:
                         self.use_item(partyMember, party[tI], item)
                         break
 
+    def perform_enemy_turn(self):
+        """Perform enemy turn logic."""
+        playerParty = self.playerParty
+        enemyParty = self.enemyParty
+        ui = self.ui
+        for enemyMember in filter(lambda p: p.hp > 0, enemyParty):
+            viableEnemy = list(filter(lambda p: p.hp > 0, enemyParty))
+            viablePlayer = list(filter(lambda p: p.hp > 0, playerParty))
+            aI = self.enemy_choose_action(enemyMember)
+            if aI == 0:
+                tar = self.enemy_choose_target(viablePlayer, enemyMember)
+                self.attack(enemyMember, tar)
+            elif aI == 1:
+                spell = self.enemy_choose_spell(enemyMember)
+                ui.print_selection(spell.name, enemyMember.name)
+                if spell.type == "white":
+                    party = viableEnemy
+                elif spell.type == "black":
+                    party = viablePlayer
+                tar = self.enemy_choose_target(party, enemyMember)
+                self.spell_cast(enemyMember, tar, spell)
+
+    def check_victory(self):
+        """Check for player victory condition."""
+        ui = self.ui
+        if all(e.get_hp() <= 0 for e in self.enemyParty):
+            ui.print_victory("You have won.")
+            return True
+
+    def check_defeat(self):
+        """Check for player defeat condition."""
+        ui = self.ui
+        if all(p.get_hp() <= 0 for p in self.playerParty):
+            ui.print_defeat("You have lost.")
+            return True
+
     def battle(self):
         """Begin Battle Phase."""
         self.playerParty = self.get_party(True)
         self.enemyParty = self.get_party()
         while True:
             self.perform_player_turn()
-            # self.check_victory(self.enemyParty)
-            # self.perform_enemy_turn(self.playerParty, self.enemyParty)
-            # self.check_defeat(self.playerParty)
-            # Check if enemy party is dead
-            # all()
-
-            for enemyMember in filter(lambda p: p.hp > 0, self.enemyParty):
-                viableEnemy = list(filter(lambda p: p.hp > 0, self.enemyParty))
-                viablePlayer = list(filter(lambda p: p.hp > 0,
-                                           self.playerParty))
-                aI = self.enemy_choose_action(enemyMember)
-                if aI == 0:
-                    tar = self.enemy_choose_target(viablePlayer, enemyMember)
-                    self.attack(enemyMember, tar)
-                elif aI == 1:
-                    spell = self.enemy_choose_spell(enemyMember)
-                    ui.print_selection(spell.name, enemyMember.name)
-                    if spell.type == "white":
-                        party = viableEnemy
-                    elif spell.type == "black":
-                        party = viablePlayer
-                    tar = self.enemy_choose_target(party, enemyMember)
-                    self.spell_cast(enemyMember, tar, spell)
-                # check if player party is dead
-                # all()
+            if self.check_victory():
+                break
+            self.perform_enemy_turn()
+            if self.check_defeat():
+                break
 
     # Create Items
     def create_items(self):
