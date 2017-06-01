@@ -60,23 +60,30 @@ class Game:
             if not choice.isdigit():
                 ui.print_error("You must enter a number")
             elif int(choice) == len(aSpells) + 1:
+                ui.print_message("You selected Cancel")
                 return None
             elif int(choice)-1 in range(len(aSpells)):
-                return aSpells[int(choice) - 1]
+                spell = aSpells[int(choice) - 1]
+                ui.print_selection(spell.name, player.name)
+                return spell
             else:
                 ui.print_error("You must choose a number in the list")
 
     def choose_item(self, player):
         """Return player item choice."""
         ui = self.ui
+        ui.list_inventory(player.inventory)
         while True:
             choice = input("Choose an Item:")
             if not choice.isdigit():
                 ui.print_error("You must enter a number")
             elif int(choice) == len(player.inventory) + 1:
-                return -1
+                ui.print_message("You selected Cancel")
+                return None
             elif 1 <= int(choice) <= len(player.inventory):
-                return int(choice) - 1
+                item = player.inventory[int(choice) - 1]
+                ui.print_selection(item["item"].name, player.name)
+                return item
             else:
                 ui.print_error("You must choose a number in the list")
 
@@ -103,11 +110,12 @@ class Game:
             if not choice.isdigit():
                 ui.print_error("You must select a number")
             elif 1 <= int(choice) <= len(party):
-                i = int(choice) - 1
-                ui.print_selection(party[i].name, player.name)
-                return i
+                target = party[int(choice) - 1]
+                ui.print_selection(target.name, player.name)
+                return target
             elif int(choice) == len(party) + 1:
-                return -1
+                ui.print_message("You selected Cancel")
+                return None
             else:
                 ui.print_error("You must choose a number in the list")
 
@@ -215,44 +223,35 @@ class Game:
                 aI = self.choose_action(partyMember)
                 # Attack
                 if aI == 0:
-                    tI = self.choose_target(viableEnemy, partyMember)
-                    if tI == -1:
-                        ui.print_message("You selected Cancel")
+                    target = self.choose_target(viableEnemy, partyMember)
+                    if not target:
                         continue
-                    self.attack(partyMember, enemyParty[tI])
+                    self.attack(partyMember, target)
                     break
                 # Spell
                 elif aI == 1:
                         spell = self.choose_spell(partyMember)
                         if not spell:
-                            ui.print_message("You selected Cancel")
                             continue
-                        ui.print_selection(spell.name, partyMember.name)
                         if spell.type == "white":
                             party = viablePlayer
                         elif spell.type == "black":
                             party = viableEnemy
-                        tI = self.choose_target(party, partyMember)
-                        if tI == -1:
-                            ui.print_message("You selected Cancel")
+                        target = self.choose_target(party, partyMember)
+                        if not target:
                             continue
-                        self.spell_cast(partyMember, party[tI], spell)
+                        self.spell_cast(partyMember, target, spell)
                         break
                 # Item
                 elif aI == 2:
-                        ui.list_inventory(partyMember.inventory)
-                        itemIndex = self.choose_item(partyMember)
-                        if itemIndex == -1:
-                            ui.print_message("You selected Cancel")
+                        item = self.choose_item(partyMember)
+                        if not item:
                             continue
-                        item = partyMember.get_item(itemIndex)
-                        ui.print_selection(item.name, partyMember.name)
                         party = viablePlayer
-                        tI = self.choose_target(party, partyMember)
-                        if tI == -1:
-                            ui.print_message("You selected Cancel")
+                        target = self.choose_target(party, partyMember)
+                        if not target:
                             continue
-                        self.use_item(partyMember, party[tI], item)
+                        self.use_item(partyMember, target, item["item"])
                         break
 
     def perform_enemy_turn(self):
