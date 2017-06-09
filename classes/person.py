@@ -15,7 +15,7 @@ class Person:
         self.atkl = stats["attack"] - 10
         self.atkh = stats["attack"] + 10
         self.df = stats["defense"]
-        self.action = stats["actions"]
+        self.__action = None
         self.spell = stats["spells"]
         self.inventory = []
 
@@ -89,3 +89,14 @@ class Person:
     def get_item_quantity(self, i):
         """Return Item Object's quantity within Inventory."""
         return self.inventory[i]["quantity"]
+
+    @property
+    def action(self):
+        """Return self.__action."""
+        return self.__action
+
+    @action.setter
+    def action(self, value):
+        """Set the value of self.__action."""
+        if type(value) == list:
+            self.__action = value

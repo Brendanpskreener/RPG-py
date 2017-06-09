@@ -6,6 +6,7 @@ from classes.item import Item
 from classes.ui import UI
 from random import randrange
 from random import choice as randChoice
+from classes.terminalmenu import TerminalMenu
 
 
 class Game:
@@ -13,20 +14,30 @@ class Game:
 
     def __init__(self):
         """Docstring for Game initialization."""
-        # Create spell
-        self.spellList = [
-            Spell("Fire", 10, 60, "black", Fore.RED + Style.BRIGHT),
-            Spell("Thunder", 20, 80, "black", Fore.YELLOW),
-            Spell("Blizzard", 30, 100, "black", Fore.BLUE),
-            Spell("Cure", 12, 120, "white", Fore.GREEN)
-            ]
-        # Create Items
+        self.spellList = self.create_spells()
         self.itemList = self.create_items()
-        # Instantiate People
         self.playerParty = []
         self.enemyParty = []
-        # Instantiate UI
         self.ui = UI()
+        self.__menu = {}
+        # Tier 0
+        self.__menu["action"] = TerminalMenu("Choose an action")
+        # Tier 1
+        self.__menu["attackTarget"] = \
+            TerminalMenu("", back=self.__menu["action"].serve_menu)
+        self.__menu["spell"] = \
+            TerminalMenu("", back=self.__menu["action"].serve_menu)
+        self.__menu["item"] = \
+            TerminalMenu("", back=self.__menu["action"].serve_menu)
+        # Tier 2
+        self.__menu["whiteTarget"] = \
+            TerminalMenu("", back=self.__menu["spell"].serve_menu)
+        self.__menu["blackTarget"] = \
+            TerminalMenu("", back=self.__menu["spell"].serve_menu)
+        self.__menu["goodItemTarget"] = \
+            TerminalMenu("", back=self.__menu["item"].serve_menu)
+        self.__menu["badItemTarget"] = \
+            TerminalMenu("", back=self.__menu["item"].serve_menu)
 
     def choose_action(self, player):
         """Return player action choice."""
@@ -208,12 +219,82 @@ class Game:
                                   item.value, item.type)
         source.remove_item(item)
 
+    def __get_action_menu_options(self, player):
+        """Return a list of player action options.
+
+        The player action options list contains a number of option dictionaries
+        defining the option's ``text``, ``func``, and optionally its ``args``.
+        ``{"text": "foo", "func": bar, "args": ["baz"]}``
+        """
+        menu = self.__menu
+        options = []
+        for action in player.action:
+            if action == "Attack":
+                options.append({"text": action,
+                                "func": menu["attackTarget"].serve_menu})
+            elif action == "Magic":
+                options.append({"text": action,
+                                "func": menu["spell"].serve_menu})
+            elif action == "Item":
+                options.append({"text": action,
+                                "func": menu["item"].serve_menu})
+        return options
+
+    def __get_spell_menu_options(self, player):
+        """Return a list of player spell options.
+
+        The player spell options list contains a number of option dictionaries
+        defining the option's ``text``, ``func``, and optionally its ``args``.
+        ``{"text": "foo", "func": bar, "args": ["baz"]}``
+        """
+        options = []
+        menu = self.__menu
+        for s in filter(lambda s: s.cost <= player.get_mp(), player.spell):
+            text = f"{s.color}{s.name}{Style.RESET_ALL} (Cost: {s.cost})"
+            if s.type == "black":
+                options.append({"text": text,
+                                "func": menu["blackTarget"].serve_menu,
+                                "args": [s]})
+            elif s.type == "white":
+                options.append({"text": text,
+                                "func": menu["whiteTarget"].serve_menu,
+                                "args": [s]})
+        return options
+
+    def __get_item_menu_options(self, player):
+        """Return a list of player item options.
+
+        The player item options list contains a number of option dictionaries
+        defining the option's ``text``, ``func``, and optionally its ``args``.
+        ``{"text": "foo", "func": bar, "args": ["baz"]}``
+        """
+        options = []
+        menu = self.__menu
+        for i in player.inventory:
+            if i.type == "potion":
+                options.append({"text": i,
+                                "func": menu["goodItemTarget"].serve_menu,
+                                "args": [i]})
+        return options
+
     def perform_player_turn(self):
         """Perform player turn logic."""
         playerParty = self.playerParty
         enemyParty = self.enemyParty
+        menu = self.__menu
         ui = self.ui
-        for partyMember in filter(lambda p: p.hp > 0, playerParty):
+        for member in filter(lambda p: p.hp > 0, playerParty):
+            print(f"{member.name}'s Turn'")
+            menu["attackTarget"].options
+            # menu["badItemTarget"].options
+            menu["goodItemTarget"].options
+            menu["blackTarget"].options
+            menu["whiteTarget"].options
+            menu["item"].options = self.__get_item_menu_options(member)
+            menu["spell"].options = self.__get_spell_menu_options(member)
+            menu["action"].options = self.__get_action_menu_options(member)
+            menu["action"].serve_menu()
+
             viableEnemy = list(filter(lambda p: p.hp > 0, enemyParty))
             viablePlayer = list(filter(lambda p: p.hp > 0,
                                        playerParty))
@@ -305,18 +386,17 @@ class Game:
     # Create Items
     def create_items(self):
         """Create master Item List."""
-        return [
-                Item("Potion", "potion", "Heals 50 HP", 50),
+        return [Item("Potion", "potion", "Heals 50 HP", 50),
                 Item("Hi-Potion", "potion", "Heals 100 HP", 100),
-                Item("Super Potion", "potion", "Heals 500 HP", 500)
-                ]
+                Item("Super Potion", "potion", "Heals 500 HP", 500)]
 
-    # Goal: Handle high level player/enemy party creation
-    # Player or Enemy party?
-    #   If player: get name
-    #              add to player list
-    #   else: add random number of enemies to enemy list
-    #   Tier 1
+    def create_spells(self):
+        """Create master spell list."""
+        return [Spell("Fire", 10, 60, "black", Fore.RED + Style.BRIGHT),
+                Spell("Thunder", 20, 80, "black", Fore.YELLOW),
+                Spell("Blizzard", 30, 100, "black", Fore.BLUE),
+                Spell("Cure", 12, 120, "white", Fore.GREEN)]
+
     def get_party(self, isPlayer=False, count=3):
         """Return party."""
         if isPlayer:
@@ -325,8 +405,6 @@ class Game:
             party = self.get_enemy_party(count)
         return party
 
-    # Tier 2
-    # Player Party Creation
     def get_player_party(self, count=3):
         """Return player party."""
         ui = self.ui
@@ -337,24 +415,22 @@ class Game:
                 ui.print_error("You must enter at least 1 character")
             else:
                 # Create party member
-                partyMember = self.get_person({
+                mbr = self.get_person({
                     "name": charName,
                     "hp": 500,
                     "mp": 70,
                     "attack": 45,
                     "defense": 40,
-                    "actions": ["Attack", "Magic", "Item"],
                     "spells": self.spellList
                 })
-                # Fill party member's inventory
+                mbr.action = ["Attack", "Magic", "Item"]
+                # Fill party mbr's inventory
                 for item in self.itemList:
-                    partyMember.add_item(item, 5)
-                # Add party member to player party
-                self.add_party_member(party, partyMember)
+                    mbr.add_item(item, 5)
+                # Add party mbr to player party
+                self.add_party_member(party, mbr)
         return party
 
-    # Tier 2
-    # Enemy Party Creation
     def get_enemy_party(self, count=3):
         """Return ."""
         party = []
@@ -378,7 +454,6 @@ class Game:
         # TODO Add stat validation
         return Person(stats)
 
-    # Tier 3
     def add_party_member(self, party, member):
         """Append member to party."""
         if type(member) == Person:
