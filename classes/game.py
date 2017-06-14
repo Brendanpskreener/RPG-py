@@ -12,13 +12,13 @@ from classes.terminalmenu import TerminalMenu
 class Game:
     """Defines the Game class object."""
 
-    def __init__(self):
+    def __init__(self, ui=UI):
         """Docstring for Game initialization."""
         self.spellList = self.create_spells()
         self.itemList = self.create_items()
         self.playerParty = []
         self.enemyParty = []
-        self.ui = UI()
+        self.ui = ui()
         self.__menu = {}
         # Tier 0
         self.__menu["action"] = TerminalMenu("Choose an action")
@@ -271,11 +271,42 @@ class Game:
         options = []
         menu = self.__menu
         for i in player.inventory:
-            if i.type == "potion":
-                options.append({"text": i,
+            text = f"{i['item'].name} (Quantity: {i['quantity']})"
+            if i["item"].type == "potion":
+                options.append({"text": text,
                                 "func": menu["goodItemTarget"].serve_menu,
-                                "args": [i]})
+                                "args": [i["item"]]})
         return options
+
+    def __get_attack_target_menu_options(self, source, party):
+        """Return list of menu options ``dict`` containing entities to attack.
+
+        Viable targets have more than 0 HP remaining.
+
+        Args:
+            source (Person): A person object.
+            party (list): A list of person objects.
+        """
+        viableTargets = []
+        for mbr in party:
+            if mbr.hp > 0:
+                viableTargets.append({"text": mbr.name,
+                                      "func": self.__do_attack,
+                                      "args": [source, mbr]})
+        return viableTargets
+
+# python -m unittest test\test-game.py -v
+
+    def fname(arg):
+        pass
+
+    def fname(arg):
+        pass
+
+    def __do_attack(self, args):
+        """Do something."""
+        print(f"{Fore.RED}{args[0].name} attacks {args[1].name}{Style.RESET_ALL}")
+        pass
 
     def perform_player_turn(self):
         """Perform player turn logic."""
@@ -284,8 +315,11 @@ class Game:
         menu = self.__menu
         ui = self.ui
         for member in filter(lambda p: p.hp > 0, playerParty):
-            print(f"{member.name}'s Turn'")
-            menu["attackTarget"].options
+            ui.print_hpmp(playerParty, True)
+            ui.print_hpmp(enemyParty)
+            print(f"{member.name}'s Turn")
+            menu["attackTarget"].options = \
+                self.__get_attack_target_menu_options(member, enemyParty)
             # menu["badItemTarget"].options
             menu["goodItemTarget"].options
             menu["blackTarget"].options
@@ -299,8 +333,6 @@ class Game:
             viablePlayer = list(filter(lambda p: p.hp > 0,
                                        playerParty))
             while True:
-                ui.print_hpmp(playerParty, True)
-                ui.print_hpmp(enemyParty)
                 aI = self.choose_action(partyMember)
                 # Attack
                 if aI == 0:
@@ -441,9 +473,9 @@ class Game:
                 "mp": 70,
                 "attack": 45,
                 "defense": 40,
-                "actions": ["Attack", "Magic", "Item"],
                 "spells": self.spellList
             })
+            enemy.action = ["Attack", "Magic", "Item"]
             for item in self.itemList:
                 enemy.add_item(item, 5)
             self.add_party_member(party, enemy)
