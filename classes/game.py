@@ -23,112 +23,14 @@ class Game:
         # Tier 0
         self.__menu["action"] = TerminalMenu("Choose an action")
         # Tier 1
-        self.__menu["attackTarget"] = \
-            TerminalMenu("", back=self.__menu["action"].serve_menu)
-        self.__menu["spell"] = \
-            TerminalMenu("", back=self.__menu["action"].serve_menu)
-        self.__menu["item"] = \
-            TerminalMenu("", back=self.__menu["action"].serve_menu)
+        self.__menu["attackTarget"] = TerminalMenu("", back=True)
+        self.__menu["spell"] = TerminalMenu("", back=True)
+        self.__menu["item"] = TerminalMenu("", back=True)
         # Tier 2
-        self.__menu["whiteTarget"] = \
-            TerminalMenu("", back=self.__menu["spell"].serve_menu)
-        self.__menu["blackTarget"] = \
-            TerminalMenu("", back=self.__menu["spell"].serve_menu)
-        self.__menu["goodItemTarget"] = \
-            TerminalMenu("", back=self.__menu["item"].serve_menu)
-        self.__menu["badItemTarget"] = \
-            TerminalMenu("", back=self.__menu["item"].serve_menu)
-
-    def choose_action(self, player):
-        """Return player action choice."""
-        ui = self.ui
-        ui.list_actions(player.action)
-        while True:
-            choice = input(f"{player.name}, Choose an action:")
-            if not choice.isdigit():
-                ui.print_error("You must select a number")
-            elif 1 <= int(choice) <= len(player.action):
-                i = int(choice) - 1
-                ui.print_selection(player.get_action_name(i), player.name)
-                return i
-            else:
-                ui.print_error("You must choose a number in the list")
-
-    def choose_spell(self, player):
-        """Return spell object choice.
-
-        Parameters
-        ---------
-        player : Person
-            Person object that will choose a spell from their list of spells
-        """
-        ui = self.ui
-        aSpells = list(filter(lambda s: s.cost <= player.get_mp(),
-                              player.spell))
-        ui.list_spells(aSpells)
-        while True:
-            choice = input("Choose a spell:")
-            if not choice.isdigit():
-                ui.print_error("You must enter a number")
-            elif int(choice) == len(aSpells) + 1:
-                ui.print_message("You selected Cancel")
-                return None
-            elif int(choice)-1 in range(len(aSpells)):
-                spell = aSpells[int(choice) - 1]
-                ui.print_selection(spell.name, player.name)
-                return spell
-            else:
-                ui.print_error("You must choose a number in the list")
-
-    def choose_item(self, player):
-        """Return player item choice."""
-        ui = self.ui
-        ui.list_inventory(player.inventory)
-        while True:
-            choice = input("Choose an Item:")
-            if not choice.isdigit():
-                ui.print_error("You must enter a number")
-            elif int(choice) == len(player.inventory) + 1:
-                ui.print_message("You selected Cancel")
-                return None
-            elif 1 <= int(choice) <= len(player.inventory):
-                item = player.inventory[int(choice) - 1]
-                ui.print_selection(item["item"].name, player.name)
-                return item
-            else:
-                ui.print_error("You must choose a number in the list")
-
-    def choose_target(self, party, player):
-        """Return target selection.
-
-        Description
-        ----------
-        Print list of available targets to the console for the player to
-        choose from then present the player with a prompt. The choice is
-        validated and the result is passed to the UI object to be printed.
-
-        Parameters
-        ----------
-        party : list
-            list of person objects to pick target from
-        player : Person
-            Person object picking the target
-        """
-        ui = self.ui
-        ui.list_targets(party)
-        while True:
-            choice = input("Choose a Target:")
-            if not choice.isdigit():
-                ui.print_error("You must select a number")
-            elif 1 <= int(choice) <= len(party):
-                target = party[int(choice) - 1]
-                ui.print_selection(target.name, player.name)
-                return target
-            elif int(choice) == len(party) + 1:
-                ui.print_message("You selected Cancel")
-                return None
-            else:
-                ui.print_error("You must choose a number in the list")
+        self.__menu["whiteTarget"] = TerminalMenu("", back=True)
+        self.__menu["blackTarget"] = TerminalMenu("", back=True)
+        self.__menu["goodItemTarget"] = TerminalMenu("", back=True)
+        self.__menu["badItemTarget"] = TerminalMenu("", back=True)
 
     def enemy_choose_action(self, player):
         """Return randomly selected action.
@@ -210,15 +112,6 @@ class Game:
             ui.print_damage_dealt(source.name, target.name,
                                   spellDmg, spell.name)
 
-    def use_item(self, source, target, item):
-        """Perform use item action on target with item."""
-        ui = self.ui
-        if item.type == "potion":
-            target.heal(item.value)
-            ui.print_healing_done(source.name, target.name,
-                                  item.value, item.type)
-        source.remove_item(item)
-
     def __get_action_menu_options(self, player):
         """Return a list of player action options.
 
@@ -278,8 +171,8 @@ class Game:
                                 "args": [i["item"]]})
         return options
 
-    def __get_attack_target_menu_options(self, source, party):
-        """Return list of menu options ``dict`` containing entities to attack.
+    def __get_target_menu_options(self, source, party, func):
+        """Return list of menu options ``dict`` containing entities to target.
 
         Viable targets have more than 0 HP remaining.
 
@@ -288,24 +181,41 @@ class Game:
             party (list): A list of person objects.
         """
         viableTargets = []
-        for mbr in party:
-            if mbr.hp > 0:
-                viableTargets.append({"text": mbr.name,
-                                      "func": self.__do_attack,
-                                      "args": [source, mbr]})
+        for target in party:
+            if target.hp > 0:
+                viableTargets.append({"text": target.name,
+                                      "func": func,
+                                      "args": [source, target]})
         return viableTargets
 
-# python -m unittest test\test-game.py -v
-
-    def fname(arg):
-        pass
-
-    def fname(arg):
-        pass
-
     def __do_attack(self, args):
-        """Do something."""
-        print(f"{Fore.RED}{args[0].name} attacks {args[1].name}{Style.RESET_ALL}")
+        source, target = args
+        dmg = source.generate_damage()
+        return (source.name,
+                target.name,
+                target.take_damage(dmg),
+                "offensive",
+                "attack")
+
+    def __do_spell(self, args):
+        source, target, spell = args
+        source.reduce_mp(spell.cost)
+        delta = spell.generate_damage()
+        if spell.type == "black":
+            deltaType = "offensive"
+            hpDelta = target.take_damage(delta)
+        if spell.type == "white":
+            deltaType = "healing"
+            hpDelta = target.heal(delta)
+        return (source.name,
+                target.name,
+                hpDelta,
+                deltaType,
+                f"{spell.color}{spell.name}{Style.RESET_ALL}")
+
+    def __do_good_item(self, args):
+        source, target, item = args
+        source.remove_item(item)
         pass
 
     def perform_player_turn(self):
@@ -319,53 +229,29 @@ class Game:
             ui.print_hpmp(enemyParty)
             print(f"{member.name}'s Turn")
             menu["attackTarget"].options = \
-                self.__get_attack_target_menu_options(member, enemyParty)
+                self.__get_target_menu_options(member, enemyParty,
+                                               self.__do_attack)
             # menu["badItemTarget"].options
-            menu["goodItemTarget"].options
-            menu["blackTarget"].options
-            menu["whiteTarget"].options
+            menu["goodItemTarget"].options = \
+                self.__get_target_menu_options(member, playerParty,
+                                               self.__do_good_item)
+            menu["blackTarget"].options = \
+                self.__get_target_menu_options(member, enemyParty,
+                                               self.__do_spell)
+            menu["whiteTarget"].options = \
+                self.__get_target_menu_options(member, playerParty,
+                                               self.__do_spell)
             menu["item"].options = self.__get_item_menu_options(member)
             menu["spell"].options = self.__get_spell_menu_options(member)
             menu["action"].options = self.__get_action_menu_options(member)
-            menu["action"].serve_menu()
+            results = menu["action"].serve_menu()
+            # print(f"\nRESULTS: {results}\n")
+            source, target, hpDelta, deltaType, deltaSource = results
 
-            viableEnemy = list(filter(lambda p: p.hp > 0, enemyParty))
-            viablePlayer = list(filter(lambda p: p.hp > 0,
-                                       playerParty))
-            while True:
-                aI = self.choose_action(partyMember)
-                # Attack
-                if aI == 0:
-                    target = self.choose_target(viableEnemy, partyMember)
-                    if not target:
-                        continue
-                    self.attack(partyMember, target)
-                    break
-                # Spell
-                elif aI == 1:
-                        spell = self.choose_spell(partyMember)
-                        if not spell:
-                            continue
-                        if spell.type == "white":
-                            party = viablePlayer
-                        elif spell.type == "black":
-                            party = viableEnemy
-                        target = self.choose_target(party, partyMember)
-                        if not target:
-                            continue
-                        self.spell_cast(partyMember, target, spell)
-                        break
-                # Item
-                elif aI == 2:
-                        item = self.choose_item(partyMember)
-                        if not item:
-                            continue
-                        party = viablePlayer
-                        target = self.choose_target(party, partyMember)
-                        if not target:
-                            continue
-                        self.use_item(partyMember, target, item["item"])
-                        break
+            if deltaType == "offensive":
+                ui.print_damage_dealt(source, target, hpDelta, deltaSource)
+            elif deltaType == "healing":
+                ui.print_healing_done(source, target, hpDelta, deltaSource)
 
     def perform_enemy_turn(self):
         """Perform enemy turn logic."""
@@ -405,8 +291,8 @@ class Game:
 
     def battle(self):
         """Begin Battle Phase."""
-        self.playerParty = self.get_party(True)
-        self.enemyParty = self.get_party()
+        self.playerParty = self.get_player_party(3)
+        self.enemyParty = self.get_enemy_party(3)
         while True:
             self.perform_player_turn()
             if self.check_victory():
@@ -429,14 +315,6 @@ class Game:
                 Spell("Blizzard", 30, 100, "black", Fore.BLUE),
                 Spell("Cure", 12, 120, "white", Fore.GREEN)]
 
-    def get_party(self, isPlayer=False, count=3):
-        """Return party."""
-        if isPlayer:
-            party = self.get_player_party(count)
-        else:
-            party = self.get_enemy_party(count)
-        return party
-
     def get_player_party(self, count=3):
         """Return player party."""
         ui = self.ui
@@ -447,7 +325,7 @@ class Game:
                 ui.print_error("You must enter at least 1 character")
             else:
                 # Create party member
-                mbr = self.get_person({
+                mbr = Person({
                     "name": charName,
                     "hp": 500,
                     "mp": 70,
@@ -467,7 +345,7 @@ class Game:
         """Return ."""
         party = []
         for i in range(1, count + 1, 1):
-            enemy = self.get_person({
+            enemy = Person({
                 "name": f"Shithead {i}",
                 "hp": 500,
                 "mp": 70,
@@ -480,11 +358,6 @@ class Game:
                 enemy.add_item(item, 5)
             self.add_party_member(party, enemy)
         return party
-
-    def get_person(self, stats):
-        """Return a person object."""
-        # TODO Add stat validation
-        return Person(stats)
 
     def add_party_member(self, party, member):
         """Append member to party."""
