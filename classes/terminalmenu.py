@@ -1,114 +1,138 @@
-"""Terminal Menu.
+"""Terminal Menu. A menu system for your terminal life.
 
 This module provides users with tools to build simple, nestable, terminal based
 menus. Each menu node is created independently and can be "linked" via the back
 property to create "nested" menus.
 
-
-
-Todo:
-    * Finish module level comments
-    * Throw exceptions when invalid setter values supplied
-    * Add unit tests (to ../tests/)
+TODO:
+    * Identify a fix for massive traceback produced when navigating up and down
+      a menu structure. Navigating into a sub menu and then selecting 'Back'
+      causes two function calls to be added to the traceback. _Not sure if this
+      is an actual issue._
 """
 import os
 import sys
 
 
 class TerminalMenu:
-    """Terminal Menu Class."""
+    """TerminalMenu.
 
-    def __init__(self, display, options=None, back=None):
-        """Terminal Menu class init.
+    TerminalMenu(prompt, options=None, back=False)
 
-        Args:
-            display (str): Text to display above menu options.
-            options (list): A list of option dictionaries.
-            back (function): A function to be called via ``back_action``
-        """
+    Arguments:
+        prompt (str): Menu prompt to be displayed above options.
+        options (list): A list of option dictionaries.
+                        An option dictionary consists of two mandatory keys,
+                        ``text`` and ``func`` and one optional key ``args``.
+                        ``text`` is the string displayed to the user under the
+                        prompt. ``func`` is a callable that is executed when an
+                        option is picked. ``args`` is a list passed to the
+                        called ``func`` callable.
+        back (function): If ``True`` then a 'Back' option will be appended to
+                         this menu's options when they are printed. If this
+                         option is selected the menu will return to the
+                         previous menu where it will reprint its options.
+    """
+
+    def __init__(self, prompt, options=None, back=False):
+        """Terminal Menu init."""
         self.__display = None
         self.__back = None
         self.__options = None
         self.__selected = None
-        self.display = display
+        self.prompt = prompt
         self.back = back
         self.options = options
 
     def __display_options(self):
         """Print the menu into the terminal."""
         # os.system("cls")
-        print(f"\n{self.display}\n{'-'*20}")
+        print(f"\n{self.prompt}\n{'-'*20}")
+        backNumber = 1
         if self.options:
+            backNumber = len(self.options) + 1
             for index, option in enumerate(self.options):
                 print(f"{index + 1}. {option['text']}")
-            if self.back:
-                print(f"{len(self.options) + 1}. Back")
-        else:
-            if self.back:
-                print(f"1. Back")
+        if self.back:
+            print(f"{backNumber}. Back")
 
     def __get_choice(self):
-        """Return option dictionary based on user choice."""
+        """Return chosen option dictionary."""
         options = self.options
         while True:
             choice = input(">>> ")
+            backNumber = 1
             if self.options:
-                if not choice.isdigit():
-                    print("Please enter a number from the list")
-                    continue
-                elif 0 <= (int(choice) - 1) <= (len(options) - 1):
-                    choice = int(choice) - 1
-                    return options[choice]
-                elif int(choice) == len(options) + 1:
-                    self.back_action()
-                else:
-                    print("Please enter a number from the list")
+                backNumber = len(self.options) + 1
+
+            if not choice.isdigit():
+                print("Please enter a number from the list")
+                continue
+            elif int(choice) == backNumber:
+                return {"event": "back"}
+            elif 0 <= (int(choice) - 1) <= (len(options) - 1):
+                choice = int(choice) - 1
+                return options[choice]
             else:
-                if not choice.isdigit():
-                    print("Please enter a number from the list")
-                elif int(choice) == 1:
-                    self.back_action()
-                else:
-                    print("Please enter a number from the list")
+                print("Please enter a number from the list")
 
     def serve_menu(self, *args):
         """Display options, get user choice."""
         self.__display_options()
         self.selected = self.__get_choice()
-        if len(args):
+        if "event" in self.selected:
+            return self.selected
+        elif len(args):
             return self.__choice_handler(args)
         else:
             return self.__choice_handler()
 
     def __choice_handler(self, args=None):
-        """Handle choice function and optional args."""
-        if self.selected["func"].__name__ == "back_action":
-            return self.back_action()
+        """Handle choice function and optional args.
 
+        If this is a sub-menu then the parent menu may have passed ``args`` to
+        it. If this is the case then the ``args`` from the previous menu will
+        be merged with the ``args`` associated with this menu's selected option
+        and they will be passed to the option's ``func``.
+
+        If the ``func`` key value returns a value and it is a dictionary with
+        the key ``event`` and a value of ``back`` then this menu returns that
+        dictionary to the parent menu where it triggers it to relist its
+        options to the user.
+
+        I'm really not happy with this logic.
+        """
         func = self.selected["func"]
-        choiceArgs = None
-        if "args" in self.selected:
-            choiceArgs = self.selected["args"]
+        funcReturn = None
+        optionArgs = None
 
-        if args and choiceArgs:
-            choiceArgs += args
-            return func(choiceArgs)
-        elif args and not choiceArgs:
+        if "args" in self.selected:
+            optionArgs = self.selected["args"]
+
+        if args and optionArgs:
+            optionArgs += args
+            funcReturn = func(optionArgs)
+        elif args and not optionArgs:
             if len(args) == 1:
-                return func(args[0])
+                funcReturn = func(args[0])
             else:
-                return func(args)
-        elif not args and choiceArgs:
-            if len(choiceArgs) == 1:
-                return func(choiceArgs[0])
+                funcReturn = func(args)
+        elif not args and optionArgs:
+            if len(optionArgs) == 1:
+                funcReturn = func(optionArgs[0])
             else:
-                return func(choiceArgs)
+                funcReturn = func(optionArgs)
         else:
-            return func()
+            funcReturn = func()
+
+        if funcReturn:
+            if "event" in funcReturn and funcReturn["event"] == "back":
+                return self.serve_menu()
+        return funcReturn
 
     def back_action(self):
         """Call function stored in ``self.back``."""
-        self.back()
+        return self.back()
 
     @property
     def options(self):
@@ -117,8 +141,16 @@ class TerminalMenu:
 
     @options.setter
     def options(self, value):
-        if type(value) == list:
-            self.__options = value
+        if type(value) == list or value is None:
+            if value is None \
+                    or not len(value) \
+                    or all(type(x) is dict for x in value):
+                self.__options = value
+            else:
+                raise TypeError(f"list index value must be dict,\
+                                 not {type(value)}")
+        else:
+            raise TypeError(f"must be list or None, not {type(value)}")
 
     @property
     def back(self):
@@ -127,8 +159,10 @@ class TerminalMenu:
 
     @back.setter
     def back(self, value):
-        if callable(value):
+        if type(value) is bool:
             self.__back = value
+        else:
+            raise TypeError(f"must be bool, not {type(value)}")
 
     @property
     def display(self):
@@ -137,9 +171,10 @@ class TerminalMenu:
 
     @display.setter
     def display(self, value):
-        """Set the value of self.__display."""
-        if type(value) == str:
+        if type(value) is str or value is None:
             self.__display = value
+        else:
+            raise TypeError(f"must be str or None, not {type(value)}")
 
     @property
     def selected(self):
@@ -148,62 +183,44 @@ class TerminalMenu:
 
     @selected.setter
     def selected(self, value):
-        """Set the value of self.__selected."""
-        if type(value) == dict:
+        if type(value) is dict or value is None:
             self.__selected = value
+        else:
+            raise TypeError(f"must be dict or None, not {type(value)}")
 
 
 if __name__ == "__main__":
-    from random import randrange
-
-    # os.system("cls")  # Clear terminal (windows variant)
-
-    # Test functions
-    def attack(args):
-        """Return random attack value as formatted string."""
-        target = args
-        print(f"Attacked {target} for {randrange(50, 150)}!")
-
-    def cast_spell(args):
-        """Return random spell value as formatted string."""
-        target, spell = args
-        print(f"Attacked {target} with {spell} for {randrange(50, 150)}!")
+    def join_print(args):
+        """Join args and print the result."""
+        joined = "".join(args)
+        print(joined)
 
     def exit():
         """System exit."""
-        os.system("cls")
+        os.system("cls")  # Windows Terminal "clear"
         sys.exit()
 
-    # Define menu "shells"
-    actionMenu = TerminalMenu("Choose an action")
-    atkTargetMenu = TerminalMenu("Choose a target", back=actionMenu.serve_menu)
-    spellMenu = TerminalMenu("Choose a spell", back=actionMenu.serve_menu)
-    splTargetMenu = TerminalMenu("Choose a target", back=spellMenu.serve_menu)
+    mainMenu = TerminalMenu("Main Menu: Choose an option.")
+    aFirstMenu = TerminalMenu("aFirst Menu: Choose an option.", back=True)
+    bFirstMenu = TerminalMenu("bFirst Menu: Choose an option.", back=True)
+    bSecondMenu = TerminalMenu("bSecond Menu: Choose an option.", back=True)
+    emptyMenu = TerminalMenu("This is empty", back=True)
 
-    # Define menu options (bottom up)
-    atkTargetMenu.options = [{"text": "Gerblin", "func": attack,
-                              "args": ["gerblin"]},
-                             {"text": "Bepis", "func": attack,
-                              "args": ["bepis"]},
-                             {"text": "Cancel",
-                              "func": atkTargetMenu.back_action}]
+    mainMenu.options = [{"text": "aFirst Menu", "func": aFirstMenu.serve_menu},
+                        {"text": "bFirst Menu", "func": bFirstMenu.serve_menu},
+                        {"text": "Empty Menu", "func": emptyMenu.serve_menu},
+                        {"text": "Exit", "func": exit}]
 
-    spellMenu.options = [{"text": "Fireball", "func": splTargetMenu.serve_menu,
-                          "args": ["fireball"]},
-                         {"text": "Blizzard", "func": splTargetMenu.serve_menu,
-                          "args": ["blizzard"]},
-                         {"text": "Cancel", "func": spellMenu.back_action}]
+    aFirstMenu.options = [{"text": "Print 'foo'",
+                           "func": print,
+                           "args": ["foo"]}]
 
-    splTargetMenu.options = [{"text": "Gerblin", "func": cast_spell,
-                              "args": ["gerblin"]},
-                             {"text": "Bepis", "func": cast_spell,
-                              "args": ["bepis"]},
-                             {"text": "Cancel",
-                              "func": splTargetMenu.back_action}]
+    bFirstMenu.options = [{"text": "Pass 'foo' to sub-menu",
+                           "func": bSecondMenu.serve_menu,
+                           "args": ["foo"]}]
 
-    actionMenu.options = [{"text": "Attack", "func": atkTargetMenu.serve_menu},
-                          {"text": "Spell", "func": spellMenu.serve_menu},
-                          {"text": "Exit", "func": exit}]
+    bSecondMenu.options = [{"text": "Join 'bar' with passed arg and print",
+                            "func": join_print,
+                            "args": ["bar"]}]
 
-    # Serve up a hot and delicious option menu.
-    actionMenu.serve_menu()
+    mainMenu.serve_menu()
