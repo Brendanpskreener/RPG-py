@@ -35,6 +35,7 @@ class Person:
         self.hp += dmg
         if self.hp > self.maxhp:
             self.hp = self.maxhp
+        return dmg
 
     def get_hp(self):
         """Return current HP."""
